@@ -12,7 +12,7 @@ use Time::HiRes qw (usleep sleep);
 use Lab::Bus;
 use Data::Dumper;
 use Carp;
-use Lab::Bus::DEBUG::HumanInstrument;
+#use Lab::Bus::DEBUG::HumanInstrument;
 
 use Lab::Exception
 
@@ -29,7 +29,7 @@ our %fields = (
 	query_length=>300, # bytes
 	query_long_length=>10240, #bytes
 	read_length => 1000, # bytesx
-
+	timeout => 1,
 	instrument_index => 0,
 );
 
@@ -52,11 +52,11 @@ sub new {
 	# This is not and will be no gui application, so start the gui main loop in a thread.
 	# A little process communication will soon follow...
 	print "Starting 'human instrument' console.\n";
-	my $human_console = new Lab::Bus::DEBUG::HumanInstrument();
-	$thr = threads->create( sub { $human_console->MainLoop(); print "NOOOOO!"; } );
+	#my $human_console = new Lab::Bus::DEBUG::HumanInstrument();
+	#$thr = threads->create( sub { $human_console->MainLoop(); print "NOOOOO!"; } );
 
 
-	$thr->detach();
+	#$thr->detach();
 
 	return $self;
 }
