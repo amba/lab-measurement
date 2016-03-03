@@ -459,7 +459,7 @@ sub add_DataFile {
 
 sub start {
 	my $self = shift;
-	ReadMode('cbreak');
+	# ReadMode('cbreak');
 
 	
 

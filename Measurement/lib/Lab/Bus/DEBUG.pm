@@ -3,6 +3,7 @@
 package Lab::Bus::DEBUG;
 our $VERSION = '3.500';
 
+use warnings;
 use strict;
 use threads;
 use threads::shared;
@@ -12,6 +13,8 @@ use Time::HiRes qw (usleep sleep);
 use Lab::Bus;
 use Data::Dumper;
 use Carp;
+use YAML;
+
 #use Lab::Bus::DEBUG::HumanInstrument;
 
 use Lab::Exception
@@ -31,6 +34,7 @@ our %fields = (
 	read_length => 1000, # bytesx
 	timeout => 1,
 	instrument_index => 0,
+	debug_name => undef,
 );
 
 
@@ -73,7 +77,12 @@ sub connection_new { # @_ = ({ resource_name => $resource_name })
 	$connection_handle = { debug_instr_index => $self->instrument_index() };
 
 	$self->instrument_index($self->instrument_index() + 1 );
-
+	if ($self->{config}->{debug_name}) {
+		$self->debug_name($self->{config}->{debug_name});
+	}
+	else {
+		$self->debug_name ("Instroment No. ". $self->instrument_index());
+	}
 	return $connection_handle;   
 }
 
@@ -92,15 +101,15 @@ sub connection_read { # @_ = ( $connection_handle, $args = { read_length, brutal
 	my $result = undef;
 	my $user_status = undef;
 	my $message = "";
-
+	my $name = $self->debug_name();
 	my $brutal_txt = 'false';
 	$brutal_txt = 'true' if $brutal;
-
+		  
 	( $message = <<ENDMSG ) =~ s/^\t+//gm;
 
 
 		  DEBUG bus
-		  connection_read called on Instrument No. $connection_handle->{'debug_instr_index'}
+		  connection_read called on $name
 		  Brutal:      $brutal_txt
 		  Read length: $read_length
 
@@ -127,6 +136,7 @@ ENDMSG
 	}
 
 	print "\n";
+	print "return result: '$result'\n";
 	return $result;
 }
 
@@ -148,6 +158,7 @@ sub connection_write { # @_ = ( $connection_handle, $args = { command, wait_stat
 
 	my $message = "";
 	my $user_return = "";
+	my $name = $self->debug_name();
 
 	my $brutal_txt = 'false';
 	$brutal_txt = 'true' if $brutal;
@@ -157,25 +168,20 @@ sub connection_write { # @_ = ( $connection_handle, $args = { command, wait_stat
 
 
 		  DEBUG bus
-		  connection_write called on Instrument No. $connection_handle->{'debug_instr_index'}
+		  connection_write called on $name
 		  Command:     $command
 		  Brutal:      $brutal_txt
 		  Read length: $read_length
 		  Wait status: $wait_status
-
-		  Enter return state: (E)rror, just Return for success
 ENDMSG
+	
 	print $message;
 
-	$user_return = <STDIN>;
-	chomp($user_return);
 
-	if(!defined $command) {
-		Lab::Exception::CorruptParameter->throw(
-			error => "No command given to " . __PACKAGE__ . "::connection_write().\n",
-		);
-	}
-	else {
+	if (!$self->{config}->{DEBUG_succeed}) {
+		  print "Enter return state: (E)rror, just Return for success\n";
+		  $user_return = <STDIN>;
+		  chomp($user_return);
 
 		if ( $user_return eq 'E' ) {
 			Lab::Exception::Error->throw(
@@ -183,9 +189,9 @@ ENDMSG
 			);
 		}
 
-		print "\n";
+		  print "\n";
+	  }
 		return 1;
-	}
 }
 
 
