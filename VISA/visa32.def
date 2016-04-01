@@ -1,0 +1,19 @@
+; Used to create visa32.a from visa32.lib. See mingw.org/wiki/CreateImportLibraries
+EXPORTS
+	NI_viOpenDefaultRM@4 @ 1
+	_IMPORT_DESCRIPTOR_VISA32 @ 2 DATA
+	_NULL_IMPORT_DESCRIPTOR @ 3 DATA
+	NI_viImplVISA1 @ 4 DATA
+	viClear@4
+	viClose@4
+	viOpenDefaultRM@4
+	viSetAttribute@12
+	viGetAttribute@12
+	viGpibControlREN@8
+	viReadSTB@8
+	viFindNext@8
+	viWrite@16
+	viOpen@20
+	viRead@16
+	viFindRsrc@20
+	

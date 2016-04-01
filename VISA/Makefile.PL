@@ -23,8 +23,8 @@ WriteMakefile(
 # TODO: find out how to figure these out automatically.
 
     (($^O =~ /MSWin32/)
-    ?   ('LIBS'         => ['"-lC:\\Program Files (x86)\\IVI Foundation\\VISA\\WinNT\\lib\\msc\\visa32.lib"'],
-         'INC'          => '"-IC:\\Program Files (x86)\\IVI Foundation\\VISA\\WinNT\\include"',
+    ?   ('LIBS'         => "-lvisa32.a",#['"-lC:\\Program Files\\IVI Foundation\\VISA\\WinNT\\lib\\msc\\visa32.a"'],
+         'INC'          => '"-IC:\\Program Files\\IVI Foundation\\VISA\\WinNT\\include"',
         )
     :   ('LIBS'         => ['-lvisa'],
          'INC'          => '-I/usr/local/include/',
