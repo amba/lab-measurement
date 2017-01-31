@@ -17,9 +17,10 @@ perl:
 install:
   # Install gnuplot 5 for plot tests. (Not available on Ubuntu 12.04)
   - cd /tmp
-  - wget https://sourceforge.net/projects/gnuplot/files/gnuplot/5.0.5/gnuplot-5.0.5.tar.gz
-  - tar -xf gnuplot-5.0.5.tar.gz
-  - cd gnuplot-5.0.5
+  - gp_version=5.0.1
+  - wget https://sourceforge.net/projects/gnuplot/files/gnuplot/$gp_version/gnuplot-$gp_version.tar.gz
+  - tar -xf gnuplot-$gp_version.tar.gz
+  - cd gnuplot-$gp_version
   - ./configure --prefix=$HOME/local
   - make -j2
   - make install
@@ -33,7 +34,7 @@ install:
   - cpanm ExtUtils::ParseXS
 
   - cpanm --installdeps -n .
-  - cpanm -v -n PDL::Graphics::Gnuplot
+  - cpanm -v -f PDL::Graphics::Gnuplot
   - cpanm -n Test::Perl::Critic
 
 script:
