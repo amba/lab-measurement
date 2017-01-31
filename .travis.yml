@@ -30,10 +30,10 @@ install:
   - cd $TRAVIS_BUILD_DIR/Measurement
   
   # required before installing PDL
-  - cpanm -n ExtUtils::ParseXS
+  - cpanm ExtUtils::ParseXS
 
   - cpanm --installdeps -n .
-  - cpanm -v PDL::Graphics::Gnuplot
+  - cpanm -v -n PDL::Graphics::Gnuplot
   - cpanm -n Test::Perl::Critic
 
 script:
