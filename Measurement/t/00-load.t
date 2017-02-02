@@ -81,13 +81,6 @@ my %depencencies = (
 
     'Math::Interpolate' => ['Lab/XPRESS/Data/XPRESS_dataset.pm'],
 
-    'IPC::Run' => [
-        qw{
-            Lab/XPRESS/Xpression/PlotterGUI_bidirectional.pm
-            Lab/XPRESS/Xpression/bidirectional_gnuplot_pipe.pm
-            }
-    ],
-
     'LinuxGpib' => ['LinuxGPIB'],
 
     'Lab::VISA' => [qw{VISA Lab/Bus/IsoBus.pm Lab/Connection/IsoBus.pm}],
