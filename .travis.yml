@@ -17,7 +17,7 @@ perl:
 install:
   # Install gnuplot 5 for plot tests. (Not available on Ubuntu 12.04)
   - cd /tmp
-  - gp_version=5.0.1
+  - gp_version=5.0.5
   - wget https://sourceforge.net/projects/gnuplot/files/gnuplot/$gp_version/gnuplot-$gp_version.tar.gz
   - tar -xf gnuplot-$gp_version.tar.gz
   - cd gnuplot-$gp_version
