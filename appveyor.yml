@@ -1,18 +1,21 @@
-configuration:
-  
-  # - --version 5.24.1.1
-  # - --version 5.24.1.1 --x86
-  - --version 5.20.1.1
-  - --version 5.20.1.1 --x86
-  
+environment:
+  matrix:
+    - sp_config: --version 5.20.3.3
+    - sp_config: --version 5.20.3.3 --x86
+      
 install:
-  - choco install --allowemptychecksum strawberryperl %configuration%
+  - choco install --allowemptychecksum strawberryperl %sp_config%
   - path C:\strawberry\perl\bin;C:\strawberry\perl\site\bin;C:\strawberry\c\bin;%PATH%
   - perl -V
+  
+  - choco install gnuplot.portable
+  - path C:\Program Files\gnuplot\bin;%PATH%
+  - gnuplot --version
+  
   - cd Measurement
-  - cpan App::cpanminus
   - cpanm --installdeps -v .
-
+  - cpanm -v PDL::Graphics::Gnuplot
+  
 build_script:
   - perl ./Build.PL
   - ./Build
