@@ -162,7 +162,7 @@ has pad => (
     is        => 'ro',
     isa       => enum( [ ( 0 .. 30 ) ] ),
     predicate => 'has_pad',
-    writer => '_pad'
+    writer    => '_pad'
 );
 
 has gpib_address => (
@@ -183,12 +183,7 @@ has board_index => (
     default => 0,
 );
 
-has timeout => (
-    is      => 'ro',
-    isa     => 'Num',
-    default => 1,
-);
-
+# Timeout set on controller
 has current_timeout => (
     is       => 'ro',
     isa      => 'Num',
@@ -244,16 +239,6 @@ sub BUILD {
 
     $self->_device_descriptor($device_descriptor);
 
-}
-
-sub _timeout_arg {
-    my $self    = shift;
-    my %arg     = @_;
-    my $timeout = $arg{timeout};
-    if ( not defined $timeout ) {
-        $timeout = $self->timeout();
-    }
-    return $timeout;
 }
 
 =head1 METHODS
@@ -355,28 +340,6 @@ sub Write {
         ibsta => $ibsta,
         name  => "ibwrt with args:\n" . Dump( \%arg )
     );
-}
-
-=head2 Query
-
- my $data = $connection->Query(command => '*IDN?');
-
-Call C<Write> followed by C<Read>.
-
-=cut
-
-sub Query {
-    my ( $self, %arg ) = validated_hash(
-        \@_,
-        timeout_param,
-        command => { isa => 'Str' },
-    );
-
-    my %write_arg = %arg;
-    $self->Write(%write_arg);
-
-    delete $arg{command};
-    return $self->Read(%arg);
 }
 
 =head2 Clear
