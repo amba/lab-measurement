@@ -1,21 +1,16 @@
-package Lab::Moose::Connection::TCP;
+package Lab::Moose::Connection::Socket;
 
 use 5.010;
 
 use Moose;
 use MooseX::Params::Validate;
-use Moose::Util::TypeConstraints qw(enum);
 
 use IO::Socket::INET;
 use IO::Select;
-use Time::HiRes qw/gettimeofday tv_interval/;
 use Carp;
 
 use Lab::Moose::Instrument qw/timeout_param/;
 
-use Time::HiRes qw/gettimeofday tv_interval/;
-
-use YAML::XS;
 use namespace::autoclean;
 
 our $VERSION = '3.540';
@@ -47,11 +42,9 @@ has port => (
 );
 
 sub BUILD {
-    my $self = shift;
-
-    my $host = $self->host();
-    my $port = $self->port();
-
+    my $self   = shift;
+    my $host   = $self->host();
+    my $port   = $self->port();
     my $client = IO::Socket::INET->new(
         PeerAddr => $host,
         PeerPort => $port,
@@ -80,16 +73,7 @@ sub Write {
         croak "timeout in connection Write";
     }
 
-    my $len = $self->client()->syswrite($command);
-    if ( !$len ) {
-        croak "write error in connection: $!";
-    }
-    my $expected_len = length $command;
-    if ( $len != $expected_len ) {
-
-        # FIXME: do repeated writes?
-        croak "incomplete write: written: $len, expected: $expected_len";
-    }
+    print { $self->client() } $command;
 }
 
 sub Read {
@@ -98,37 +82,37 @@ sub Read {
         timeout_param(),
     );
     my $timeout = $self->_timeout_arg(%arg);
+    my $client  = $self->client();
 
-    my $result = "";
-
-    # If the message does not fit into one IP packet, we will need several
-    # sysread operations.
-    my $start_time = [gettimeofday];
-    while (1) {
-        my $elapsed_time = tv_interval($start_time);
-
-        if ( $elapsed_time > $timeout ) {
-            croak(
-                "timeout in Read with args:\n",
-                Dump( \%arg )
-            );
-        }
-
-        if ( !$self->select()->can_read($timeout) ) {
-            croak "timeout in connection Write";
-        }
-
-        my $buffer;
-        $self->client()->sysread( $buffer, 65536 )
-            or croak "read error in connection: $!";
-
-        $result .= $buffer;
-
-        if ( substr( $buffer, -1 ) eq "\n" ) {
-            last;
-        }
+    if ( !$self->select()->can_read($timeout) ) {
+        croak "timeout in connection Read";
     }
-    return $result;
+
+    my $line = <$client>;
+
+    if ( $line =~ /^#([1-9])/ ) {
+
+        # DEFINITE LENGTH ARBITRARY BLOCK RESPONSE DATA
+        # See IEEE 488.2, Sec. 8.7.9
+        my $num_digits = $1;
+        my $num_bytes = substr( $line, 2, $num_digits );
+
+        # We do require a trailing newline
+        my $needed = 2 + $num_digits + $num_bytes - length($line) + 1;
+        if ( $needed < 0 ) {
+            croak "negative read length";
+        }
+        my $string;
+        my $read_bytes = read( $client, $string, $needed );
+        if ( $read_bytes != $needed ) {
+            croak "tcp read returned too few bytes:\n"
+                . "expected: $needed, got: $read_bytes";
+        }
+        return $line . $string;
+    }
+    else {
+        return $line;
+    }
 }
 
 sub Query {
@@ -147,7 +131,9 @@ sub Clear {
 
 }
 
-with 'Lab::Moose::Connection';
+with qw/
+    Lab::Moose::Connection
+    /;
 
 __PACKAGE__->meta->make_immutable();
 
