@@ -1,11 +1,11 @@
 environment:
   matrix:
     # Run quick build without recursive testing of dependencies.
-    - strawberry_version: 5.20.1.1
+    - strawberry_version: 5.24.1.1
       installdeps_options: -n -v 
-    - strawberry_version: 5.20.1.1
+    - strawberry_version: 5.24.1.1
       installdeps_options: -v
-    - strawberry_version: 5.20.1.1 --x86
+    - strawberry_version: 5.24.1.1 --x86
       installdeps_options: -v
       
 install:
