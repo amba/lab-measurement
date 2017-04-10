@@ -1055,7 +1055,7 @@ sub exit_loop {
 
 # my $self = shift;
 
-# my $char = ReadKey(1e-5);
+# my $char = ReadKey(-1);
 # if ( defined $char )
 # {
 # $self->user_command($char);
@@ -1100,7 +1100,7 @@ sub check_loop_duration {
 
     my $self = shift;
 
-    my $char = ReadKey(1e-5);
+    my $char = ReadKey(-1);
     if ( defined $char ) {
         $self->user_command($char);
     }

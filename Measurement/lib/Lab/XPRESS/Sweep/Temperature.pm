@@ -26,7 +26,7 @@ sub new {
         pid                 => undef,
         mode                => 'continuous',
         allowed_instruments => [
-            'Lab::Instrument::ITC', 'Lab::Instrument::TCD',
+            'Lab::Instrument::ITC',       'Lab::Instrument::TCD',
             'Lab::Instrument::OI_ITC503', 'Lab::Instrument::OI_Triton'
         ],
         allowed_sweep_modes => [ 'continuous', 'step', 'list' ],
@@ -326,12 +326,13 @@ sub stabilize {
         my $elapsed_time = $self->convert_time( time() - $time0 );
 
         my $output
-            = $elapsed_time . " | "
-            . sprintf( "%3.4f", @T_INSTR[-1] ) . " | "
-#            . sprintf( "%3.3f", @T_SENSOR[-1] ) . " | "
-#            . sprintf( "%3.3f", @MEDIAN_INSTR[-1] ) . " | "
+            = $elapsed_time . " | " . sprintf( "%3.4f", @T_INSTR[-1] ) . " | "
+
+            #            . sprintf( "%3.3f", @T_SENSOR[-1] ) . " | "
+            #            . sprintf( "%3.3f", @MEDIAN_INSTR[-1] ) . " | "
             . sprintf( "%2.4f", $INSTR_STD_DEV ) . " | "
-#            . sprintf( "%2.3f", $SENSOR_STD_DEV ) . " | "
+
+            #            . sprintf( "%2.3f", $SENSOR_STD_DEV ) . " | "
             . $criterion_setpoint . " | "
             . $criterion_std_dev_INSTR . " | "
             . $criterion_std_dev_SENSOR;
@@ -356,7 +357,7 @@ sub stabilize {
 
         }
 
-        my $char = ReadKey(1e-5);
+        my $char = ReadKey(-1);
         if ( defined $char and $char eq 'c' ) {
             last;
         }
