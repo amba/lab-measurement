@@ -13,7 +13,9 @@ use Exporter 'import';
 use Lab::Moose::Connection;
 use Carp;
 
-our @EXPORT = qw/instrument datafolder datafile/;
+# FIXME: export 'use warnings; use strict; into caller'
+
+our @EXPORT = qw/instrument datafolder datafile linspace/;
 
 =head1 SYNOPSIS
 
@@ -38,6 +40,8 @@ our @EXPORT = qw/instrument datafolder datafile/;
      folder => $folder,
      filename => 'file.yml'
  );
+
+ my @points = linspace(from => -1, to => 1, step => 0.1);
 
 =head1 SUBROUTINES
 
@@ -117,6 +121,39 @@ sub datafile {
     load $type;
 
     return $type->new(%args);
+}
+
+=head2 linspace
+
+ # create array (-1, -0.9, ..., 0.9, 1) 
+ my @points = linspace(from => -1, to => 1, step => 0.1);
+
+ # create array without first point (-0.9, ..., 1)
+ my @points = linspace(from => -1, to => 1, step => 0.1, exclude_from => 1);
+
+=cut
+
+sub linspace {
+    my ( $from, $to, $step, $exclude_from ) = validated_list(
+        \@_,
+        from         => { isa => 'Num' },
+        to           => { isa => 'Num' },
+        step         => { isa => 'Num' },
+        exclude_from => { isa => 'Bool', default => 0 },
+    );
+
+    $step = abs($step);
+    my $sign = $to > $from ? 1 : -1;
+
+    my @steps;
+    for ( my $i = $exclude_from ? 1 : 0;; ++$i ) {
+        my $point = $from + $i * $sign * $step;
+        if ( ( $point - $to ) * $sign >= 0 ) {
+            last;
+        }
+        push @steps, $point;
+    }
+    return ( @steps, $to );
 }
 
 1;

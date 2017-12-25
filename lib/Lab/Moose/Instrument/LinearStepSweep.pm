@@ -8,33 +8,11 @@ use Lab::Moose::Instrument 'setter_params';
 
 # time() returns floating seconds.
 use Time::HiRes qw/time usleep/;
-
+use Lab::Moose 'linspace';
 use Carp;
 
 requires qw/max_units_per_second max_units_per_step min_units max_units
     source_level cached_source_level source_level_timestamp/;
-
-sub linspace {
-    my ( $from, $to, $step ) = validated_list(
-        \@_,
-        from => { isa => 'Num' },
-        to   => { isa => 'Num' },
-        step => { isa => 'Num' },
-    );
-
-    $step = abs($step);
-    my $sign = $to > $from ? 1 : -1;
-
-    my @steps;
-    for ( my $i = 1;; ++$i ) {
-        my $point = $from + $i * $sign * $step;
-        if ( ( $point - $to ) * $sign >= 0 ) {
-            last;
-        }
-        push @steps, $point;
-    }
-    return ( @steps, $to );
-}
 
 =head1 METHODS
 
@@ -83,7 +61,10 @@ sub linear_step_sweep {
         croak "rate must be > 0";
     }
 
-    my @steps         = linspace( from => $from, to => $to, step => $step );
+    my @steps = linspace(
+        from         => $from, to => $to, step => $step,
+        exclude_from => 1
+    );
     my $time_per_step = $step / $rate;
     my $time          = time();
 
