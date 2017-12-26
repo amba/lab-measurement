@@ -10,8 +10,10 @@ package Lab::Moose::Sweep;
 
 use 5.010;
 use Moose;
+use Moose::Util::TypeConstraints 'enum';
 use MooseX::Params::Validate;
 use File::Spec::Functions 'catfile';
+use Data::Printer colored => 0;
 
 # Do not import functions as they clash with the attribute methods.
 use Lab::Moose ();
@@ -40,11 +42,6 @@ has points => (
     builder => '_build_points'
 );
 
-has current_point => (
-    is     => 'ro',             isa     => 'Int', init_arg => undef,
-    writer => '_current_point', default => 0,
-);
-
 has slave => (
     is     => 'ro', isa => 'Lab::Moose::Sweep', init_arg => undef,
     writer => '_slave'
@@ -64,6 +61,11 @@ has datafile => (
     writer => '_datafile'
 );
 
+has create_datafile_blocks => (
+    is     => 'ro', isa => 'Bool', init_arg => undef,
+    writer => '_create_datafile_blocks'
+);
+
 # Should this sweep create a new datafile for each measurement point?
 has create_datafiles => (
     is  => 'ro',
@@ -74,7 +76,7 @@ has datafolder => (
     is       => 'ro',
     isa      => 'Lab::Moose::DataFolder',
     init_arg => undef,
-    writer   => '_create_datafiles'
+    writer   => '_datafolder'
 );
 
 has measurement => (
@@ -99,16 +101,27 @@ sub _build_points {
     return \@points;
 }
 
+sub _ensure_sweeps_different {
+    my $self   = shift;
+    my @sweeps = @_;
+
+    my %h = map { ( $_ + 0 ) => 1 } (@sweeps);
+    my @keys = keys %h;
+    if ( @keys != @sweeps ) {
+        croak "all sweeps must be separate objects!";
+    }
+}
+
 # Called by user on master sweep
 sub start {
     my $self = shift;
-    my ( $slaves, $datafile_params, $measurement, $datafile_dims, $folder )
+    my ( $slaves, $datafile_params, $measurement, $datafile_dim, $folder )
         = validated_list(
         \@_,
         slaves => { isa => 'ArrayRef[Lab::Moose::Sweep]', optional => 1 },
         datafile    => { isa => 'HashRef' }, # change to datafile handle later
         measurement => { isa => 'CodeRef' },
-        datafile_dims => { isa => enum( [qw/2 1 0/] ), optional => 1 },
+        datafile_dim => { isa => enum( [qw/2 1 0/] ), optional => 1 },
         folder => { isa => 'Str', optional => 1 },
         );
 
@@ -123,19 +136,25 @@ sub start {
         push @sweeps, @slaves;
     }
 
-    if ( defined $datafile_dims ) {
-        if ( $num_slaves == 0 and $datafile_dims == 2 ) {
+    $self->_ensure_sweeps_different(@sweeps);
+
+    if ( defined $datafile_dim ) {
+        if ( $num_slaves == 0 and $datafile_dim == 2 ) {
             croak "cannot create 2D datafile without slaves";
         }
     }
     else {
         # Set default log_structure
         if ( $num_slaves == 0 ) {
-            $datafile_dims = 1,
+            $datafile_dim = 1,
         }
         else {
-            $datafile_dims = 2,
+            $datafile_dim = 2,
         }
+    }
+
+    if ( $datafile_dim == 2 ) {
+        $sweeps[-2]->_create_datafile_blocks(1);
     }
 
     if ($num_slaves) {
@@ -147,7 +166,13 @@ sub start {
             $parent->_slave($slave);
             $parent = $slave;
         }
+    }
 
+    if ($num_slaves) {
+        $slaves[-1]->_measurement($measurement);
+    }
+    else {
+        $self->_measurement($measurement);
     }
 
     # Pass this to master sweep's _start method if we have a single datafile
@@ -156,25 +181,26 @@ sub start {
 
     my $datafile;
 
-    if ( $num_slaves - $datafile_dims >= 0 ) {
-        my $datafile_creating_sweep = $sweeps[ $num_slaves - $datafile_dims ];
+    if ( $num_slaves - $datafile_dim >= 0 ) {
+        my $datafile_creating_sweep = $sweeps[ $num_slaves - $datafile_dim ];
         $datafile_creating_sweep->_create_datafiles(1);
-        $datafile_creating_sweep->_datafile_params($datafile);
+        $datafile_creating_sweep->_datafile_params($datafile_params);
         $datafile_creating_sweep->_datafolder($datafolder);
     }
     else {
         # single datafile
         my $filename = delete $datafile_params->{filename};
+        $filename .= '.dat';
         $datafile = Lab::Moose::datafile(
-            folder => $datafolder,
-            path   => $filename,
+            folder   => $datafolder,
+            filename => $filename,
             %{$datafile_params},
         );
     }
 
     $self->_start(
-        datafile           => $datafile,
-        filename_extension => '',
+        datafile            => $datafile,
+        filename_extensions => [],
     );
 
 }
@@ -189,7 +215,7 @@ sub _gen_filename {
 
     my @extensions = @{$extensions};
 
-    my $basename = $filename . join( '_', @extensions ) . '.dat';
+    my $basename = $filename . '_' . join( '_', @extensions ) . '.dat';
 
     pop @extensions;
     if ( @extensions >= 1 ) {
@@ -211,50 +237,61 @@ sub _start {
     );
 
     my @points = @{ $self->points };
+    my $slave  = $self->slave();
+
+    if ( $self->create_datafiles and defined $datafile ) {
+        croak "should not get datafile arg";
+    }
 
     # for each point:
-    while ( $self->current_point < @points ) {
-        my $point = $points[ $self->current_point ];
-        push @{$filename_extensions},
-            $self->filename_extension . sprintf( "%.15g", $point );
-        $self->instrument->set_value( value => $point );
+    for my $point (@points) {
+        my @filename_extensions = @{$filename_extensions};
+        push @filename_extensions,
+            $self->filename_extension . sprintf( "%.14g", $point );
+
+        say "sweep: setting instrument level to $point";
+        $self->instrument->set_level( value => $point );
 
         # Create new datafile?
         if ( $self->create_datafiles ) {
-            if ( defined $datafile ) {
-                croak "should not get datafile arg";
-            }
-
             my %datafile_params = %{ $self->datafile_params };
             my $filename        = delete $datafile_params{filename};
 
             $filename = $self->_gen_filename(
                 filename   => $filename,
-                extensions => $filename_extensions,
+                extensions => [@filename_extensions],
             );
 
+            say "sweep: filename: $filename";
+            say "filename_extensions:";
+            p @filename_extensions;
             $datafile = Lab::Moose::datafile(
                 folder   => $self->datafolder,
                 filename => $filename,
-                %{ $self->datafile_params() }
+                %datafile_params,
             );
         }
 
-        my $slave = $self->slave();
-        if ( defined $slave ) {
+        if ($slave) {
+
             $slave->_start(
                 datafile            => $datafile,
-                filename_extensions => $filename_extensions,
+                filename_extensions => [@filename_extensions],
             );
+            if ( $self->create_datafile_blocks() ) {
+                $datafile->new_block();
+            }
         }
         else {
             # do measurement
+            say "sweep: doing measurement";
             $self->_datafile($datafile);
             my $meas = $self->measurement();
             $self->$meas();
         }
 
-    }
+    }    # for my $point
+
 }
 
 sub log {

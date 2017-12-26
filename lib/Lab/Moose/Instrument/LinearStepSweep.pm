@@ -1,7 +1,7 @@
 package Lab::Moose::Instrument::LinearStepSweep;
 
 #ABSTRACT: Role for linear step sweeps used by voltage/current sources.
-
+use 5.010;
 use Moose::Role;
 use MooseX::Params::Validate;
 use Lab::Moose::Instrument 'setter_params';
@@ -36,6 +36,7 @@ sub linear_step_sweep {
     my $verbose        = delete $args{verbose};
     my $from           = $self->cached_source_level();
     my $last_timestamp = $self->source_level_timestamp();
+    my $distance       = abs( $to - $from );
 
     # Enforce max_units/min_units.
     my $min = $self->min_units();
@@ -53,11 +54,13 @@ sub linear_step_sweep {
 
     # Enforce step size and rate.
     my $step = abs( $self->max_units_per_step() );
+
     my $rate = abs( $self->max_units_per_second() );
     if ( $step < 1e-9 ) {
         croak "step size must be > 0";
     }
-    if ( $rate == 1e-9 ) {
+
+    if ( $rate < 1e-9 ) {
         croak "rate must be > 0";
     }
 
@@ -65,8 +68,17 @@ sub linear_step_sweep {
         from         => $from, to => $to, step => $step,
         exclude_from => 1
     );
-    my $time_per_step = $step / $rate;
-    my $time          = time();
+
+    my $time_per_step;
+    if ( $distance < $step ) {
+        $time_per_step = $distance / $rate;
+    }
+    else {
+        $time_per_step = $step / $rate;
+    }
+
+    say "time_per_step: $time_per_step";
+    my $time = time();
 
     if ( $time < $last_timestamp ) {
 

@@ -13,7 +13,7 @@ use PDL::Core qw/topdl/;
 use Data::Dumper;
 use Carp;
 use Scalar::Util 'looks_like_number';
-use Lab::Moose::Plot;
+use Module::Load 'load';
 use Lab::Moose::DataFile::Read;
 use List::Util 'any';
 use namespace::autoclean;
@@ -512,6 +512,10 @@ sub add_plot {
     my $type               = delete $args{type};
     my $hard_copy          = delete $args{hard_copy};
     my $hard_copy_terminal = delete $args{hard_copy_terminal};
+
+    # only load PDL::Graphics::Gnuplot when needed. No gnuplot is needed
+    # unless 'add_plot' is called.
+    load 'Lab::Moose::Plot';
 
     my $plot_generator_sub;
     if ( $type =~ /points?/i ) {
